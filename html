@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Auditoriya Band Qilish</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        
+        /* 1. LOGIN STYLES */
+        .login-wrap { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .login-card { width: 100%; max-width: 400px; padding: 2rem; border-radius: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        
+        /* 2. LAYOUT (Desktop & Mobile) */
+        .sidebar { 
+            height: 100vh; position: fixed; top: 0; left: 0; width: 260px; 
+            background: var(--primary); color: white; z-index: 1000; 
+            transition: 0.3s; padding-top: 20px; 
+        }
+        .main-content { margin-left: 260px; padding: 30px; transition: 0.3s; }
+        
+        /* Mobile moslashuv */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: 280px; }
+            .sidebar.active { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.3); }
+            .main-content { margin-left: 0; padding: 15px; padding-top: 70px; }
+            .mobile-header { display: flex !important; }
+        }
+
+        /* Mobile Header */
+        .mobile-header {
+            display: none; position: fixed; top: 0; left: 0; right: 0; height: 60px; 
+            background: white; z-index: 900; align-items: center; justify-content: space-between; 
+            padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 950; display: none; }
+        .overlay.active { display: block; }
+
+        /* Sidebar Links */
+        .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 16px; color: #bdc3c7; display: block; border-left: 4px solid transparent; }
+        .sidebar a.active { color: white; background: #34495e; border-left-color: var(--accent); }
+
+        /* 3. ROOM CARD */
+        .room-card { 
+            border: none; border-radius: 12px; cursor: pointer; color: white; 
+            min-height: 110px; display: flex; flex-direction: column; justify-content: space-between; 
+            transition: transform 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .room-card:active { transform: scale(0.98); }
+        .status-active { background: linear-gradient(135deg, #11998e, #38ef7d); } /* Yashil */
+        .status-busy { background: linear-gradient(135deg, #cb2d3e, #ef473a); } /* Qizil */
+
+        /* 4. TICKET CARD (Mening Chiptam) */
+        .ticket-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-radius: 15px; padding: 20px; margin-bottom: 20px;
+            border-left: 6px solid #ffd700; box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+            display: none; animation: slideIn 0.5s ease;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Scroll Buttons */
+        .floor-scroll { overflow-x: auto; white-space: nowrap; padding-bottom: 5px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; }
+        .floor-scroll::-webkit-scrollbar { display: none; }
+        .floor-btn { 
+            display: inline-block; padding: 8px 25px; border-radius: 20px; background: white; 
+            color: var(--primary); border: 1px solid #ddd; margin-right: 10px; font-weight: 600; 
+        }
+        .floor-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 2000; display: none; justify-content: center; align-items: center; flex-direction: column; }
+    </style>
+</head>
+<body>
+
+    <div id="loader"><div class="spinner-border text-primary"></div><p class="mt-2 fw-bold text-muted">Yuklanmoqda...</p></div>
+    <div class="overlay" onclick="toggleMenu()"></div>
+
+    <div id="login-view" class="login-wrap">
+        <div class="login-card text-center">
+            <i class="fas fa-university fa-3x text-primary mb-3"></i>
+            <h3 class="fw-bold">Estrada-Art</h3>
+            <p class="text-muted small mb-4">Auditoriya Band Qilish Tizimi</p>
+            <form onsubmit="handleLogin(event)">
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold">LOGIN ID</label>
+                    <input type="text" class="form-control" id="loginId" required>
+                </div>
+                <div class="mb-4 text-start">
+                    <label class="form-label small fw-bold">PAROL</label>
+                    <input type="password" class="form-control" id="loginPass" required>
+                </div>
+                <button class="btn btn-primary w-100 py-2 fw-bold">KIRISH</button>
+            </form>
+            <div id="login-error" class="text-danger mt-3 small fw-bold"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-view" style="display: none;">
+        
+        <div class="mobile-header">
+            <span class="fw-bold fs-5 text-primary">Xonalar</span>
+            <button class="btn btn-light text-primary" onclick="toggleMenu()"><i class="fas fa-bars"></i></button>
+        </div>
+
+        <div class="sidebar" id="sidebar">
+            <div class="text-center mb-4 px-3">
+                <h5 class="fw-bold mb-0">Estrada-Art</h5>
+                <small class="text-white-50" id="user-role-display">...</small>
+            </div>
+            <div class="px-3 mb-3 text-center"><span class="badge bg-light text-dark w-100 py-2" id="user-name-display">...</span></div>
+            <a href="#" class="active"><i class="fas fa-th-large me-3"></i> Xonalar</a>
+            <a href="#" onclick="location.reload()"><i class="fas fa-sign-out-alt me-3"></i> Chiqish</a>
+        </div>
+
+        <div class="main-content">
+            <div class="d-none d-md-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">Auditoriyalar</h2>
+                <button class="btn btn-outline-danger btn-sm" onclick="location.reload()">Chiqish</button>
+            </div>
+
+            <div id="my-ticket" class="ticket-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-25 p-2 rounded me-3"><i class="fas fa-ticket-alt fa-lg"></i></div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">Faol Bron</h5>
+                            <small class="text-white-50">Kech qolmang!</small>
+                        </div>
+                    </div>
+                    <button onclick="cancelMyBooking()" class="btn btn-danger btn-sm shadow-sm fw-bold px-3 rounded-pill">
+                        <i class="fas fa-trash me-1"></i> Bekor qilish
+                    </button>
+                </div>
+                <div class="mt-3 bg-white bg-opacity-10 p-3 rounded d-flex justify-content-between">
+                    <div><small class="d-block text-white-50">XONA</small><span class="fw-bold fs-5" id="ticket-room">---</span></div>
+                    <div class="text-end"><small class="d-block text-white-50">VAQT</small><span class="fw-bold" id="ticket-time">---</span></div>
+                </div>
+            </div>
+
+            <div class="floor-scroll">
+                <button class="floor-btn active" onclick="loadFloor(1)">1-Qavat</button>
+                <button class="floor-btn" onclick="loadFloor(2)">2-Qavat</button>
+                <button class="floor-btn" onclick="loadFloor(3)">3-Qavat</button>
+                <button class="floor-btn" onclick="loadFloor(4)">4-Qavat</button>
+            </div>
+
+            <div class="row g-3" id="rooms-container"></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="bookModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 bg-light">
+                    <h5 class="modal-title fw-bold">Band qilish: <span id="modalRoomName" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form onsubmit="submitBooking(event)">
+                        <input type="hidden" id="bookRoom">
+                        <div class="mb-3">
+                            <label class="small fw-bold text-muted">SANA</label>
+                            <input type="date" id="bookDate" class="form-control bg-light border-0" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="small fw-bold text-muted">VAQT</label>
+                                <input type="time" id="bookTime" class="form-control bg-light border-0" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="small fw-bold text-muted">MUDDAT</label>
+                                <select id="bookDuration" class="form-select bg-light border-0">
+                                    <option value="60">1 soat</option>
+                                    <option value="90">1.5 soat</option>
+                                    <option value="120">2 soat</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-success w-100 py-2 fw-bold shadow-sm">TASDIQLASH</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- URLNI O'ZGARTIRING ---
+        const API_URL = "SIZNING_WEB_APP_URL_MANZILINGIZ"; 
+        // ---------------------------
+
+        let CURRENT_USER = null;
+        let CURRENT_FLOOR = 1;
+
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.querySelector('.overlay').classList.toggle('active');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            showLoader(true);
+            const login = document.getElementById('loginId').value;
+            const pass = document.getElementById('loginPass').value;
+            fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "login", login, password: pass }) })
+            .then(res => res.json()).then(data => {
+                showLoader(false);
+                if(data.success) { CURRENT_USER = data; initDashboard(); } 
+                else { document.getElementById('login-error').innerText = data.message; }
+            });
+        }
+
+        function initDashboard() {
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('user-name-display').innerText = CURRENT_USER.name;
+            document.getElementById('user-role-display').innerText = CURRENT_USER.role === 'admin' ? 'Admin' : 'Talaba';
+            if(CURRENT_USER.role === 'student') checkMyTicket();
+            loadFloor(1);
+        }
+
+        function loadFloor(floor) {
+            CURRENT_FLOOR = floor;
+            showLoader(true);
+            document.querySelectorAll('.floor-btn').forEach((btn, i) => btn.classList.toggle('active', i+1 === floor));
+            fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getRooms", floor }) })
+            .then(res => res.json()).then(data => { showLoader(false); renderRooms(data.rooms); });
+        }
+
+        function renderRooms(rooms) {
+            const container = document.getElementById('rooms-container');
+            container.innerHTML = '';
+            rooms.forEach(room => {
+                const isBusy = room.status === 'busy';
+                const icon = isBusy ? 'fa-lock' : 'fa-door-open';
+                // Desktop: col-lg-3 (4 ta), Mobile: col-6 (2 ta)
+                container.innerHTML += `
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <div class="room-card p-3 ${isBusy ? 'status-busy' : 'status-active'}" 
+                             onclick="${isBusy ? '' : `openBooking('${room.number}')`}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h3 class="mb-0 fw-bold">${room.number.split('-')[0]}</h3>
+                                <i class="fas ${icon} opacity-50"></i>
+                            </div>
+                            <div class="mt-auto pt-2">
+                                <small class="fw-bold" style="font-size:12px">${room.detail}</small>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        const bookModal = new bootstrap.Modal(document.getElementById('bookModal'));
+        function openBooking(room) {
+            if(CURRENT_USER.role === 'admin') return alert("Adminlar faqat kuzatadi.");
+            document.getElementById('modalRoomName').innerText = room;
+            document.getElementById('bookRoom').value = room;
+            
+            // Avtomatik bugungi sana
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('bookDate').min = today;
+            document.getElementById('bookDate').value = today;
+            
+            bookModal.show();
+        }
+
+        function submitBooking(e) {
+            e.preventDefault();
+            bookModal.hide(); showLoader(true);
+            fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "bookRoom",
+                    userId: document.getElementById('loginId').value,
+                    username: CURRENT_USER.name,
+                    role: CURRENT_USER.role,
+                    room: document.getElementById('bookRoom').value,
+                    date: document.getElementById('bookDate').value,
+                    time: document.getElementById('bookTime').value,
+                    duration: document.getElementById('bookDuration').value
+                })
+            }).then(res => res.json()).then(data => {
+                showLoader(false);
+                alert(data.message);
+                if(data.success) { loadFloor(CURRENT_FLOOR); checkMyTicket(); }
+            });
+        }
+
+        function checkMyTicket() {
+            fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "getMyBooking", userId: document.getElementById('loginId').value }) })
+            .then(res => res.json()).then(data => {
+                const ticket = document.getElementById('my-ticket');
+                if(data.hasTicket) {
+                    ticket.style.display = 'block';
+                    document.getElementById('ticket-room').innerText = data.room;
+                    document.getElementById('ticket-time').innerText = data.time;
+                } else { ticket.style.display = 'none'; }
+            });
+        }
+
+        function cancelMyBooking() {
+            if(!confirm("Rostdan ham bronni bekor qilasizmi?")) return;
+            showLoader(true);
+            fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "cancelBooking", userId: document.getElementById('loginId').value }) })
+            .then(res => res.json()).then(data => {
+                showLoader(false);
+                alert(data.message);
+                if(data.success) { checkMyTicket(); loadFloor(CURRENT_FLOOR); }
+            });
+        }
+
+        function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
+    </script>
+</body>
+</html>
